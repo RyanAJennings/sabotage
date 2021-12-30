@@ -1,0 +1,9 @@
+name: Sabotage
+version: 0.0.1
+author: Ryan Jennings
+main: us.rjennings.sabotage.Sabotage
+api-version: 1.18
+commands:
+  vote:
+    description: Vote for a map to play.
+    usage: /vote <number>
