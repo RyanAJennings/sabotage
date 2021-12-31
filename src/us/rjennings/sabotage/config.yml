@@ -1,9 +1,10 @@
 administrators:
   - RyanAnnie
-configMode: true
+configMode: false
 maps:
   - map1
   - map2
   - map3
   - map4
   - map5
+lobby: LOBBY

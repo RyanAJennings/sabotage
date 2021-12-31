@@ -32,6 +32,11 @@ public class PlayerHandler implements Listener {
     public PlayerHandler(Sabotage _gameInstance, HashSet<String> _admins) {
         gameInstance = _gameInstance;
         admins = _admins;
+        saboteurs = new ArrayList<>();
+        players = new HashMap<>();
+
+        numLivingInnocents = 0;
+        numLivingSabs = 0;
 
         Bukkit.getOnlinePlayers().forEach(player -> {
             boolean playerIsAdmin = admins.contains(player.getDisplayName());
@@ -152,6 +157,7 @@ public class PlayerHandler implements Listener {
     @EventHandler
     private void onPlayerLeave(PlayerQuitEvent event) {
         // TODO: Handle combat-logging
+        // TODO: Retract vote
         Player player = event.getPlayer();
         SabotagePlayer sabPlayer = players.get(player.getUniqueId());
         sabPlayer.leave();
@@ -163,7 +169,7 @@ public class PlayerHandler implements Listener {
             numLivingInnocents--;
         }
 
-        event.setQuitMessage(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "[-]" +
+        event.setQuitMessage(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "[-] " +
                 player.getDisplayName() + ChatColor.GRAY.toString() + " left the game.");
     }
 
@@ -171,11 +177,15 @@ public class PlayerHandler implements Listener {
     private void onPlayerDeath(PlayerDeathEvent event) {
         event.setKeepInventory(false);
         event.setKeepLevel(true);
+        event.setDeathMessage(null);
 
-        SabotagePlayer killer = players.get(event.getEntity().getKiller().getUniqueId());
         SabotagePlayer victim = players.get(event.getEntity().getPlayer().getUniqueId());
-        DeathEvent deathEvent = new DeathEvent(killer, victim);
+        SabotagePlayer killer = null;
+        if (event.getEntity().getKiller() != null) {
+            killer = players.get(event.getEntity().getKiller().getUniqueId());
+        }
 
+        DeathEvent deathEvent = new DeathEvent(killer, victim);
         if (gameInstance.getMode() != Sabotage.Mode.GAME) {
             Bukkit.getLogger().warning(victim.getName() + " died while Sabotage was in " +
                     gameInstance.getMode() + " mode.");
@@ -189,6 +199,7 @@ public class PlayerHandler implements Listener {
             Bukkit.getLogger().severe(killer.getName() + " killed " + victim.getName() + " but was marked dead.");
             return;
         }
+
 
         if (victim.getRole() == Role.SABOTEUR) {
             numLivingSabs--;
@@ -214,8 +225,8 @@ public class PlayerHandler implements Listener {
         }
         else {
             int numRemaining = numLivingInnocents + numLivingSabs;
-            event.setDeathMessage(ChatColor.GRAY.toString() + ChatColor.BOLD + "[!]" + ChatColor.GRAY +
-                    "A player died..." + numRemaining + " players remain.");
+            event.setDeathMessage(MessageFormatter.formatMessage(MessageFormatter.Format.INFO,
+                    "A player died..." + numRemaining + " players remain."));
         }
     }
 

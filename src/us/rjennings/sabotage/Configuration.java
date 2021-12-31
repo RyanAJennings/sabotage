@@ -1,6 +1,5 @@
 package us.rjennings.sabotage;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
@@ -24,6 +23,7 @@ public class Configuration {
         startGameInConfigMode = config.getBoolean("configMode");
         gameAdmins =  new HashSet<String>(config.getStringList("administrators"));
         maps = new ArrayList<String>(config.getStringList("maps"));
+        lobby = new String(config.getString("lobby"));
     }
 
     public boolean startGameInConfigMode() {

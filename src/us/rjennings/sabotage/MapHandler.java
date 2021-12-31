@@ -17,22 +17,24 @@ public class MapHandler {
     private ArrayList<String> mapNames;
     private ArrayList<World> maps;
 
-    private Sabotage plugin;
+    private Sabotage gameInstance;
     private MVWorldManager worldManager;
 
-    public MapHandler(Sabotage _plugin, String _lobby, ArrayList<String> _maps) {
-        plugin = _plugin;
-        worldManager = getMultiverseCore().getMVWorldManager();
+    public MapHandler(Sabotage _gameInstance, String _lobby, ArrayList<String> _maps) {
+        gameInstance = _gameInstance;
 
+        worldManager = getMultiverseCore().getMVWorldManager();
         loadMaps(_lobby, _maps);
         if (maps.size() == 0) {
             // TODO: Build a default map when no map can be loaded
-            throw new RuntimeException("Unable to load any maps!");
+            Bukkit.getLogger().severe(MessageFormatter.formatMessage(MessageFormatter.Format.CONSOLE, "Could not load any maps!"));
         }
+
+        mapPoll = new MapPoll(mapNames);
     }
 
     private MultiverseCore getMultiverseCore() {
-        Plugin mvcPlugin = plugin.getServer().getPluginManager().getPlugin("MultiverseCore");
+        Plugin mvcPlugin = gameInstance.getServer().getPluginManager().getPlugin("Multiverse-Core");
         if (mvcPlugin.getName().equalsIgnoreCase("Multiverse-Core") ) {
             return (MultiverseCore) mvcPlugin;
         }
@@ -68,6 +70,7 @@ public class MapHandler {
     }
 
     public World getGameMap() {
+        mapPoll.endVoting();
         return Bukkit.getWorld(mapPoll.getWinner());
     }
 

@@ -5,38 +5,33 @@ import org.bukkit.ChatColor;
 public class MessageFormatter {
 
     public enum Format {
-        BROADCAST,
         INFO,
-        ERROR,
-        DEATH,
-        PLAYER_CHAT
+        CONSOLE,
+        ERROR
     }
 
     public static String formatMessage(Format format, String message) {
         switch (format) {
-            case BROADCAST:
-                return "";
             case INFO:
                 return formatInfoMessage(message);
-            case DEATH:
-                return formatDeathMessage(message);
+            case CONSOLE:
+                return formatConsoleLog(message);
+            case ERROR:
+                return formatErrorMessage(message);
         }
         return "";
     }
 
-    private static String formatInfoMessage(String message) {
-        return ChatColor.GREEN.toString() + ChatColor.BOLD.toString() + "[!]" +
-                ChatColor.GRAY.toString() + ChatColor.BOLD.toString() + message;
-    }
-
     private static String formatErrorMessage(String message) {
-        return ChatColor.DARK_RED.toString() + ChatColor.BOLD.toString() + "[!]" +
-                ChatColor.GRAY.toString() + ChatColor.BOLD.toString() + message;
+        return ChatColor.RED.toString() + ChatColor.BOLD + "[!] " + ChatColor.GRAY + message;
     }
 
-    private static String formatDeathMessage(String message) {
-        return ChatColor.RED.toString() + ChatColor.BOLD.toString() + "[!]" +
-                ChatColor.GRAY.toString() + ChatColor.BOLD.toString() + message;
+    private static String formatInfoMessage(String message) {
+        return ChatColor.GREEN.toString() + ChatColor.BOLD + "[!] " + ChatColor.GRAY + message;
+    }
+
+    public static String formatConsoleLog(String message) {
+        return "[Sabotage] " + message;
     }
 
     public static String getFormatPlayerChat(String nameColor) {

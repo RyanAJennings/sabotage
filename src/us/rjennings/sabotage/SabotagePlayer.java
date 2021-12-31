@@ -116,7 +116,7 @@ public class SabotagePlayer {
 
     public void readPlayerRecord() {
         try {
-            File playerRecord = new File("./PlayerRecords/" + getUuid());
+            File playerRecord = new File("PlayerRecords/" + getUuid());
             Scanner reader = new Scanner(playerRecord);
             while (reader.hasNextLine()) {
                 String data = reader.nextLine();
@@ -128,7 +128,7 @@ public class SabotagePlayer {
             }
             reader.close();
         } catch (FileNotFoundException e) {
-            Bukkit.getLogger().info("Player record not found: " + getUuid());
+            Bukkit.getLogger().info("Player record not found. First login? " + getUuid());
         }
     }
 
@@ -147,7 +147,7 @@ public class SabotagePlayer {
     // enough to register that the player left? Or would that event be registered as a playerkickevent?
     public void writePlayerRecord() {
         try {
-            File playerRecord = new File("./PlayerRecords/" + getUuid());
+            File playerRecord = new File("PlayerRecords/" + getUuid());
             if (playerRecord.createNewFile()) {
                 Bukkit.getLogger().info("Player record created: " + playerRecord.getName());
             } else {

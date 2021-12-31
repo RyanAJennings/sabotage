@@ -55,7 +55,7 @@ public class Sabotage extends JavaPlugin implements Listener {
                 }
                 seconds--;
             }
-        }, 300 /* 300 ticks = 15 seconds */);
+        }, 20 * 15);
     }
 
     public void startGameTimer() {
@@ -74,7 +74,7 @@ public class Sabotage extends JavaPlugin implements Listener {
                 }
                 seconds--;
             }
-        }, 300 /* 300 ticks = 15 seconds */);
+        }, 20 * 15);
     }
 
     public void startGracePeriodTimer() {
@@ -121,7 +121,7 @@ public class Sabotage extends JavaPlugin implements Listener {
                     Bukkit.broadcastMessage(mapHandler.getBallot());
                 }
             }
-        }.runTaskTimer(this, 0, 20 * 15);
+        }.runTaskTimer(this, 0, 20 * 30);
     }
 
     @Override
@@ -131,21 +131,26 @@ public class Sabotage extends JavaPlugin implements Listener {
         if (config.startGameInConfigMode()) {
             mode = Mode.CONFIG;
         }
+        else {
+            mode = Mode.LOBBY;
+        }
+        mapHandler = new MapHandler(this, config.getLobby(), config.getMaps());
         playerHandler = new PlayerHandler(this, config.getGameAdmins());
         getServer().getPluginManager().registerEvents(playerHandler, this);
-        mapHandler = new MapHandler(this, config.getLobby(), config.getMaps());
         commandDispatcher = new CommandDispatcher(this);
         startBallotBroadcastTask();
     }
 
     @Override
     public void onLoad() {
-        Bukkit.getLogger().info("Loaded " + this.getName());
+        Bukkit.getLogger().info(MessageFormatter.formatMessage(MessageFormatter.Format.CONSOLE,
+                "Loaded " + this.getName()));
     }
 
     @Override
     public void onDisable() {
-        Bukkit.getLogger().info("Disabled " + this.getName());
+        Bukkit.getLogger().info(MessageFormatter.formatMessage(MessageFormatter.Format.CONSOLE,
+                "Disabled " + this.getName()));
     }
 
     private void initializeNewGame() {
