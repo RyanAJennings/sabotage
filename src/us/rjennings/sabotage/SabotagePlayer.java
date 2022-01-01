@@ -10,18 +10,22 @@ import java.util.Scanner;
 import java.util.UUID;
 
 public class SabotagePlayer {
+    private final int INITIAL_KARMA_VALUE = 100;
+
     private Player player;
     // TODO: private PlayerRecord playerRecord;
     private Role role;
     private boolean alive;
     private boolean isAdmin;
     private int karma;
+    private String playerRecordPath;
 
     // TODO: Implement blood & magnifying glass
 
-    public SabotagePlayer (Player _player, boolean _isAdmin) {
+    public SabotagePlayer (String _playerRecordsPath, Player _player, boolean _isAdmin) {
         player = _player;
         role = Role.UNASSIGNED;
+        playerRecordPath = _playerRecordsPath + "/" + player.getUniqueId() + ".txt";
 
         isAdmin = _isAdmin;
         if (isAdmin) {
@@ -35,6 +39,9 @@ public class SabotagePlayer {
 
         karma = 0;
         readPlayerRecord();
+        player.setLevel(karma);
+        Bukkit.getLogger().severe("SETTING PLAYER KARMA TO: " + karma);
+        Bukkit.getLogger().severe("PLAYER LEVEL: " + player.getLevel());
     }
 
     public String getName() {
@@ -79,6 +86,11 @@ public class SabotagePlayer {
         player.setGameMode(GameMode.SPECTATOR);
     }
 
+    public void leave() {
+        alive = false;
+        writePlayerRecord();
+    }
+
     public void addKarma(int karmaValue) {
         karma += karmaValue;
         player.setLevel(karma);
@@ -86,15 +98,6 @@ public class SabotagePlayer {
 
     public void sendMessage(String message) {
         player.sendMessage(message);
-    }
-
-    public void join() {
-        readPlayerRecord();
-    }
-
-    public void leave() {
-        alive = false;
-        writePlayerRecord();
     }
 
     // TODO: This should probably be handled separately, by permissions
@@ -106,34 +109,31 @@ public class SabotagePlayer {
         return player.getUniqueId();
     }
 
-    public int getKarma() {
-        return karma;
-    }
-
     /// PLAYER RECORDS ///
     // TODO: Should just use parser lib if we add more info to player records
     // TODO: Move to a PlayerRecord class
 
     public void readPlayerRecord() {
         try {
-            File playerRecord = new File("PlayerRecords/" + getUuid());
+            File playerRecord = new File(playerRecordPath);
             Scanner reader = new Scanner(playerRecord);
             while (reader.hasNextLine()) {
                 String data = reader.nextLine();
                 String[] line = data.strip().split(":");
                 if (line.length < 2) continue;
-                String key = line[0];
-                String value = line[1];
+                String key = line[0].strip();
+                String value = line[1].strip();
                 handlePlayerRecordLine(key, value);
             }
             reader.close();
         } catch (FileNotFoundException e) {
             Bukkit.getLogger().info("Player record not found. First login? " + getUuid());
+            karma = INITIAL_KARMA_VALUE;
         }
     }
 
     private void handlePlayerRecordLine(String key, String value) {
-        if (key == "karma") {
+        if (key.equalsIgnoreCase("karma")) {
             try {
                 karma = Integer.parseInt(value);
                 player.setLevel(karma);
@@ -147,22 +147,29 @@ public class SabotagePlayer {
     // enough to register that the player left? Or would that event be registered as a playerkickevent?
     public void writePlayerRecord() {
         try {
-            File playerRecord = new File("PlayerRecords/" + getUuid());
+            File playerRecord = new File(playerRecordPath);
             if (playerRecord.createNewFile()) {
                 Bukkit.getLogger().info("Player record created: " + playerRecord.getName());
-            } else {
+            }
+            else {
                 Bukkit.getLogger().info("Found player record: " + playerRecord.getName());
-                playerRecord.delete();
-                playerRecord.createNewFile();
+                boolean deleted = playerRecord.delete();
+                if (!deleted) {
+                    Bukkit.getLogger().severe("Failed to delete player record: " + playerRecord.getName());
+                }
+                boolean created = playerRecord.createNewFile();
+                if (!created) {
+                    Bukkit.getLogger().severe("Failed to re-create player record: " + playerRecord.getName());
+                }
             }
 
-            FileWriter writer = new FileWriter(playerRecord.getName());
+            FileWriter writer = new FileWriter(playerRecordPath);
             writer.write("karma: "+ karma);
             writer.close();
             Bukkit.getLogger().info("Successfully wrote player record: " + playerRecord.getName());
         } catch (IOException e) {
             Bukkit.getLogger().severe("An error occurred while attempting to write a player record: " +
-                    getUuid().toString());
+                    playerRecordPath);
             e.printStackTrace();
         }
     }

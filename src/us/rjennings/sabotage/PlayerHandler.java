@@ -14,6 +14,10 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class PlayerHandler implements Listener {
@@ -29,6 +33,8 @@ public class PlayerHandler implements Listener {
     private int numLivingSabs = 0;
     private int numLivingInnocents = 0;
 
+    private String playerRecordsPath;
+
     public PlayerHandler(Sabotage _gameInstance, HashSet<String> _admins) {
         gameInstance = _gameInstance;
         admins = _admins;
@@ -38,9 +44,21 @@ public class PlayerHandler implements Listener {
         numLivingInnocents = 0;
         numLivingSabs = 0;
 
+        playerRecordsPath = gameInstance.getDataFolder().getAbsolutePath() + "/PlayerRecords";
+        try {
+            Files.createDirectories(Paths.get(playerRecordsPath));
+        }
+        catch (FileAlreadyExistsException e) {
+            Bukkit.getLogger().info("PlayerRecords directory found: " + playerRecordsPath);
+        }
+        catch (Exception e) {
+            Bukkit.getLogger().severe("Failed to create PlayerRecords directory. Player stats will not persist.");
+            e.printStackTrace();
+        }
+
         Bukkit.getOnlinePlayers().forEach(player -> {
             boolean playerIsAdmin = admins.contains(player.getDisplayName());
-            SabotagePlayer sabPlayer = new SabotagePlayer(player, playerIsAdmin);
+            SabotagePlayer sabPlayer = new SabotagePlayer(playerRecordsPath, player, playerIsAdmin);
             players.put(player.getUniqueId(), sabPlayer);
 
             player.teleport(gameInstance.getMapHandler().getLobby().getSpawnLocation());
@@ -68,10 +86,10 @@ public class PlayerHandler implements Listener {
         for (int i = 0; i < saboteurs.size(); i++) {
             SabotagePlayer saboteur = saboteurs.get(i);
             if (saboteur.isAlive()  && !saboteur.getName().equals(toExclude)) {
-                sabList.append(ChatColor.RED + saboteur.getName());
+                sabList.append(ChatColor.RED).append(saboteur.getName());
             }
             else if (!saboteur.getName().equals(toExclude)) {
-                sabList.append(ChatColor.GRAY + saboteur.getName());
+                sabList.append(ChatColor.GRAY).append(saboteur.getName());
             }
 
             if (i < saboteurs.size() - 1 && !saboteur.getName().equals(toExclude)) {
@@ -131,11 +149,12 @@ public class PlayerHandler implements Listener {
     @EventHandler
     private void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        SabotagePlayer sabPlayer = new SabotagePlayer(player, admins.contains(player.getName()));
-        players.put(player.getUniqueId(), sabPlayer);
-
         event.setJoinMessage(ChatColor.GREEN.toString() + ChatColor.BOLD.toString() + "[+] " +
                 player.getDisplayName() + ChatColor.GRAY.toString() + " joined the game.");
+
+        String playerRecordsPath = gameInstance.getDataFolder().getAbsolutePath() + "/PlayerRecords";
+        SabotagePlayer sabPlayer = new SabotagePlayer(playerRecordsPath, player, admins.contains(player.getDisplayName()));
+        players.put(player.getUniqueId(), sabPlayer);
 
         if (gameInstance.getMode() == Sabotage.Mode.LOBBY) {
             player.sendMessage("Welcome to Sabotage!"); // TODO: format
@@ -160,7 +179,6 @@ public class PlayerHandler implements Listener {
         // TODO: Retract vote
         Player player = event.getPlayer();
         SabotagePlayer sabPlayer = players.get(player.getUniqueId());
-        sabPlayer.leave();
 
         if (sabPlayer.getRole() == Role.SABOTEUR) {
             numLivingSabs--;
@@ -169,6 +187,7 @@ public class PlayerHandler implements Listener {
             numLivingInnocents--;
         }
 
+        sabPlayer.leave();
         event.setQuitMessage(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "[-] " +
                 player.getDisplayName() + ChatColor.GRAY.toString() + " left the game.");
     }
@@ -183,6 +202,9 @@ public class PlayerHandler implements Listener {
         SabotagePlayer killer = null;
         if (event.getEntity().getKiller() != null) {
             killer = players.get(event.getEntity().getKiller().getUniqueId());
+            if (!killer.isAlive()) {
+                Bukkit.getLogger().severe(killer.getName() + " killed " + victim.getName() + " but was marked dead.");
+            }
         }
 
         DeathEvent deathEvent = new DeathEvent(killer, victim);
@@ -195,23 +217,17 @@ public class PlayerHandler implements Listener {
             Bukkit.getLogger().severe(victim.getName() + " died but was already marked dead.");
             return;
         }
-        if (!killer.isAlive()) {
-            Bukkit.getLogger().severe(killer.getName() + " killed " + victim.getName() + " but was marked dead.");
-            return;
-        }
-
 
         if (victim.getRole() == Role.SABOTEUR) {
             numLivingSabs--;
         } else if (victim.getRole() == Role.DETECTIVE) {
             numLivingInnocents--;
-            Bukkit.broadcastMessage(ChatColor.GRAY.toString() + ChatColor.BOLD +
-                    "[!] " + ChatColor.GRAY + "The " + ChatColor.BLUE + "DETECTIVE " + ChatColor.GRAY + "has died!");
+            Bukkit.broadcastMessage(MessageFormatter.formatMessage(MessageFormatter.Format.INFO,
+                    ChatColor.GRAY + "The " + ChatColor.BLUE + "DETECTIVE " + ChatColor.GRAY + "has died!"));
         } else if (victim.getRole() == Role.INNOCENT) {
             numLivingInnocents--;
         } else {
-            Bukkit.getLogger().warning(victim.getName() +
-                    " died with an unexpected Role: " + victim.getRole());
+            Bukkit.getLogger().warning(victim.getName() + " died with an unexpected Role: " + victim.getRole());
             return;
         }
         Karma.adjustKarma(deathEvent);
@@ -298,14 +314,14 @@ public class PlayerHandler implements Listener {
     @EventHandler
     private void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        if (admins.contains(player.getUniqueId())) return;
+        if (admins.contains(player.getUniqueId().toString())) return;
         event.setCancelled(true);
     }
 
     @EventHandler
     private void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        if (admins.contains(player.getUniqueId())) return;
+        if (admins.contains(player.getUniqueId().toString())) return;
         event.setCancelled(true);
     }
 }
